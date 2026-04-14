@@ -799,25 +799,33 @@
 <!-- Start of bodyEnd -->
 <!-- End of bodyEnd -->
 </body>
-    <script>
+   <script>
 const SUPABASE_URL = 'https://fdqqclldxqzjuteenjqy.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXFjbGxkeHF6anV0ZWVuanF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTY2NzcsImV4cCI6MjA5MTczMjY3N30.5rhS6Pa76ip8eJhS0K8cnm31RqqlDSFe9mARgipgQLo'
 
-document.querySelector('[placeholder="name@email.com"]')
-  ?.closest('form, div')
-  ?.querySelector('button, [class*="button"]')
-  ?.addEventListener('click', async () => {
-    const email = document.querySelector('[placeholder="name@email.com"]').value
-    if (!email) return
-    await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email })
-    })
-    alert('You\'re on the list!')
+document.addEventListener('click', async function(e) {
+  const btn = e.target.closest('[class*="button"], button, [class*="btn"]')
+  if (!btn) return
+  const input = document.querySelector('input[type="email"], input[placeholder*="email"], input[placeholder*="Email"]')
+  if (!input || !input.value) return
+  
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ email: input.value })
   })
+  
+  if (res.ok) {
+    input.value = ''
+    alert("You're on the list! 🎉")
+  } else {
+    alert('Something went wrong, try again.')
+  }
+})
 </script>
 </html>
