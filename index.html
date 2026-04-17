@@ -849,9 +849,12 @@ function isValidEmail(e) {
 }
 
 function findEmailInput() {
+  const emails = [...document.querySelectorAll('input[type="email"]')];
+  const visibleEmail = emails.find((i) => i.offsetParent !== null);
+  if (visibleEmail) return visibleEmail;
   return (
-    document.querySelector('input[type="email"]') ||
-    [...document.querySelectorAll('input[type="text"], input:not([type])')].find(i => i.offsetParent !== null)
+    emails[0] ||
+    [...document.querySelectorAll('input[type="text"], input:not([type])')].find((i) => i.offsetParent !== null)
   );
 }
 
@@ -867,6 +870,8 @@ function hookButtons() {
       el.dataset.axiomHooked = '1';
 
       el.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const input = findEmailInput();
         if (!input) return;
 
@@ -877,6 +882,7 @@ function hookButtons() {
         if (!isValidEmail(email)) {
           showToast('That email looks invalid â please check it.', 'error'); return;
         }
+
 
         try {
           const res = await fetch('https://fdqqclldxqzjuteenjqy.supabase.co/rest/v1/waitlist', {
