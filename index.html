@@ -838,100 +838,111 @@
 </style>
 <div id="axiom-toast"></div>
 <script>
-function showToast(msg, type) {
-  const t = document.getElementById('axiom-toast');
-  t.innerHTML = (type === 'success' ? '&#10003; ' : '&#9888; ') + msg;
-  t.className = 'show ' + type;
-  setTimeout(() => t.className = '', 4500);
-}
-
-function isValidEmail(e) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
-}
-
-function findEmailInput() {
-  const allInputs = [
-    ...document.querySelectorAll('input[type="email"]'),
-    ...document.querySelectorAll('input[type="text"], input:not([type])')
-  ];
-  for (const inp of allInputs) {
-    const r = inp.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) return inp;
+(function () {
+  function showToast(msg, type) {
+    var t = document.getElementById('axiom-toast');
+    if (!t) return;
+    t.textContent = (type === 'success' ? '\u2713  ' : '\u26a0  ') + msg;
+    t.className = 'show ' + (type || '');
+    clearTimeout(window.__axiomTimer);
+    window.__axiomTimer = setTimeout(function () { t.className = ''; }, 4500);
   }
-  return allInputs[0] || null;
-}
 
-function isFormSubmitButton(el) {
-  if (el.tagName === 'A') {
-    const href = el.getAttribute('href') || '';
-    if (href && !href.startsWith('#') && href !== '') return false;
+  function isValidEmail(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((v || '').trim());
   }
-  const txt = (el.innerText || el.textContent || '').toLowerCase().trim();
-  return txt.includes('waitlist') || txt.includes('join') || txt.includes('notify') || txt.includes('subscribe');
-}
 
-function hookButtons() {
-  document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"]')
-    .forEach(el => {
-      if (el.dataset.axiomHooked || !isFormSubmitButton(el)) return;
-      el.dataset.axiomHooked = '1';
+  /* ------------------------------------------------------------------ *
+   * The Framer form has:                                                 *
+   *   <input type="email" name="Email" class="framer-form-input">        *
+   *   <button data-reset="button" class="framer-tglgX ...">              *
+   * The button is a real <button> inside .framer-1ig3jww-container.      *
+   * Framer intercepts its own click and POSTs to a Framer endpoint.      *
+   * We hook the button with capture:true so we fire FIRST, post to       *
+   * Supabase ourselves, and show the toast.                              *
+   * ------------------------------------------------------------------ */
 
-      el.addEventListener('click', async function axiomHandler(e) {
-        const input = findEmailInput();
-        if (!input) return;
+  var SUPA_URL = 'https://fdqqclldxqzjuteenjqy.supabase.co/rest/v1/waitlist';
+  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXFjbGxkeHF6anV0ZWVuanF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTY2NzcsImV4cCI6MjA5MTczMjY3N30.5rhS6Pa76ip8eJhS0K8cnm31RqqlDSFe9mARgipgQLo';
 
-        const email = input.value.trim();
-
-        if (!email) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          showToast('Please enter your email address.', 'error');
-          return;
-        }
-        if (!isValidEmail(email)) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          showToast('That email looks invalid — please check it.', 'error');
-          return;
-        }
-
-        e.preventDefault();
-        e.stopImmediatePropagation();
-
-        try {
-          const res = await fetch('https://fdqqclldxqzjuteenjqy.supabase.co/rest/v1/waitlist', {
-            method: 'POST',
-            headers: {
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXFjbGxkeHF6anV0ZWVuanF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTY2NzcsImV4cCI6MjA5MTczMjY3N30.5rhS6Pa76ip8eJhS0K8cnm31RqqlDSFe9mARgipgQLo',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXFjbGxkeHF6anV0ZWVuanF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTY2NzcsImV4cCI6MjA5MTczMjY3N30.5rhS6Pa76ip8eJhS0K8cnm31RqqlDSFe9mARgipgQLo',
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({ email })
-          });
-          if (res.ok) {
-            input.value = '';
-            showToast("You're on the list! We'll be in touch soon.", 'success');
-          } else {
-            showToast('Something went wrong — please try again.', 'error');
-          }
-        } catch {
-          showToast('Something went wrong — please try again.', 'error');
-        }
-      }, true);
+  function submitToSupabase(email, inp) {
+    fetch(SUPA_URL, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ email: email })
+    }).then(function (res) {
+      if (res.ok) {
+        if (inp) inp.value = '';
+        showToast("You're on the list! We'll be in touch soon.", 'success');
+      } else {
+        showToast('Something went wrong — please try again.', 'error');
+      }
+    }).catch(function () {
+      showToast('Something went wrong — please try again.', 'error');
     });
-}
+  }
 
-(function waitForFramer() {
-  let attempts = 0;
-  const maxAttempts = 60;
-  const interval = setInterval(() => {
-    hookButtons();
-    attempts++;
-    if (attempts >= maxAttempts) clearInterval(interval);
+  function getEmailInput() {
+    /* The Framer input has type="email" and class="framer-form-input" */
+    var inp = document.querySelector('input[type="email"].framer-form-input')
+           || document.querySelector('input[type="email"]')
+           || document.querySelector('input.framer-form-input');
+    return inp;
+  }
+
+  function hookFormButton() {
+    /* The submit button lives inside .framer-1ig3jww-container */
+    var btn = document.querySelector('.framer-1ig3jww-container button, .framer-1ig3jww-container [data-reset="button"]');
+    if (!btn || btn.dataset.axiomHooked) return;
+    btn.dataset.axiomHooked = '1';
+
+    btn.addEventListener('click', function (e) {
+      var inp = getEmailInput();
+      if (!inp) return;
+
+      var email = inp.value.trim();
+      if (!email) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        showToast('Please enter your email address.', 'error');
+        return;
+      }
+      if (!isValidEmail(email)) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        showToast('That email looks invalid — please check it.', 'error');
+        return;
+      }
+      /* Valid email: prevent Framer's own handler, post ours instead */
+      e.preventDefault(); e.stopImmediatePropagation();
+      submitToSupabase(email, inp);
+    }, true /* capture — fires before Framer's React handler */);
+  }
+
+  /* Also catch Enter key in the email input */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var inp = e.target;
+    if (!inp || inp.tagName !== 'INPUT') return;
+    var email = inp.value.trim();
+    if (!email) { showToast('Please enter your email address.', 'error'); return; }
+    if (!isValidEmail(email)) { showToast('That email looks invalid.', 'error'); return; }
+    e.preventDefault();
+    submitToSupabase(email, inp);
+  }, true);
+
+  /* Poll until the button appears (React hydrates async) */
+  var _tries = 0;
+  var _poll = setInterval(function () {
+    hookFormButton();
+    if (++_tries > 100) clearInterval(_poll); /* give up after 10s */
   }, 100);
 
-  new MutationObserver(() => hookButtons()).observe(document.body, { childList: true, subtree: true });
+  /* MutationObserver as backup */
+  new MutationObserver(hookFormButton).observe(document.body, { childList: true, subtree: true });
 })();
 </script><!-- SnippetEnd: x5_IKFbdz --><!-- End of bodyEnd -->
 </body>
